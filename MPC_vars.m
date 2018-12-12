@@ -7,7 +7,7 @@ function [H, f, Ac, Ax, b, lb, ub, options] = MPC_vars(A, B, C, K_opt, R, p, bnd
 phi = A;
 [~, no_states] = size(A);
 
-K_opt = [K_opt, zeros(1, no_states - length(K_opt))];
+%K_opt = [K_opt, zeros(1, no_states - length(K_opt))];
 
 M = [zeros(p-1, 1), eye(p-1);
      zeros(1, p)];    
