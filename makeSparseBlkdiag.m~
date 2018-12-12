@@ -1,0 +1,18 @@
+function blkA_sparse = makeSparseBlkdiag(hyper_params, no_states, Ts)
+
+
+[no_models, ~] = size(hyper_params);
+
+blkA = zeros(no_models*no_states);
+
+for i = 1 : no_models
+    
+    j = i-1;
+    
+    [a11, a22, b11, b22] = hyper_params(i, :);
+    
+    blkA(j*no_params : (j+1)*no_params, j*no_params : (j+1)*no_params) = makesysd_a(a11, a22, b11, b22, Ts);
+    
+end
+
+blkA_sparase = sparse(blkA);

@@ -35,17 +35,6 @@ obvs_poles = [0.0001, 0.001, 0.002, 0.0002]';
 L = place(sysd.A', sysd.C', obvs_poles);
 L = L';
 
-% Built the Observer model
-
-Atrue = [sysd.A - sysd.B*Kopt, sysd.B*Kopt;
-        zeros(size(sysd.A)),    sysd.A - L*sysd.C];
-    
-Btrue = [ sysd.B;
-         zeros(size( sysd.B ))];
-         
-C = [sysd.C, zeros(size(sysd.C))];
-
-D = [0; 0];
 %% State Estimator Dynamics
 
 Aobv = sysd.A - sysd.B*Kopt;
@@ -58,7 +47,7 @@ Dobv = [0; 0];
 
 
 %%
-[~, no_states] = size(Atrue);
+[~, no_states] = size(Aobv);
 [no_outputs, ~] = size(C);
 
 %% set of m, M, l
@@ -70,10 +59,16 @@ a22_set = [a22-var*a22, a22+var*a22];
 b11_set = [b11-var*b11, b11+var*b11];
 b22_set = [b22-var*b22, b22+var*b22];
 
+
 %% 
 
 sys_low = makesysd_a(a11_set(1), a22_set(1), b11_set(1), b22_set(1), Ts);
 sys_hih = makesysd_a(a11_set(2), a22_set(2), b11_set(2), b22_set(2), Ts);
+
+% Built the System model
+A = sys_low.A;
+B = sys_low.B;
+C = sys_low.C;
 
 %% check feasibility 
 value = 0;
@@ -113,7 +108,7 @@ main_bounds = [0.8, 0.2, 1]';
 [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(Aobv, Bobv, Cobv, Kopt, R, p, main_bounds, maxF);
 %%
 
-x = zeros(no_states, Time_out/Ts);
+x = zeros(4, Time_out/Ts);
 y = zeros(no_outputs, Time_out/Ts);
 
 xhat = zeros(4, Time_out/Ts);
@@ -122,11 +117,18 @@ yhat = zeros(2, Time_out/Ts);
 X = xhat(:, 1);
 Ck = x(1, :);
 
+no_models = 10;
+
 for k = 1 : Time_out/Ts - 1
     
     % kernel_func = 1./(a_prev - a_new).^2
     % sigma = diag(kernel_func)
-    R = mvnrnd(mu,sigma,2);
+    hyper_params = mvnrnd(mu,sigma,no_models);
+    %% Generate models
+    
+    
+    
+    %% Optimization part
     
     b = b1 + Ax*X;
     ck = quadprog(H, f, -Ac, -b, [], [], lb, ub, [], options);
@@ -145,7 +147,9 @@ for k = 1 : Time_out/Ts - 1
     
     
     %% System dynamics
-    x(:, k+1) = Atrue*x(:, k) + Btrue*c + v;
+    uk = -Kopt*xhat(:, k) + c;
+    
+    x(:, k+1) = A*x(:, k) + B*uk + v;
     y(:, k) = C*x(:, k) + w;
     
     
