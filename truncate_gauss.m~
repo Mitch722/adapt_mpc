@@ -1,0 +1,11 @@
+function params_set = truncate_gauss(mu, sigma, range, n)
+
+params_set = zeros(n, length(mu));
+
+for i = 1 : n
+    
+   
+    
+    
+    
+end
