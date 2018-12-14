@@ -17,16 +17,21 @@ for i = 1 : no_models
     b11 = hyper_params(i, 3);
     b22 = hyper_params(i, 4);
     
+    obvs_poles = [0.0001, 0.001, 0.002, 0.0002]';
     
     A = makesysd_a(a11, a22, b11, b22, Ts);
+    
+    L = place(A.A', sysd.C', obvs_poles);
+    L = L';
+    
     blkA(j*no_states+1 : (j+1)*no_states, j*no_states+1 : (j+1)*no_states) = A.A;
     blkBcell{i, 1} = A.B;
-    blkC(j*2+1 : (j+1)*2, j*no_states+1 : (j+1)*no_sta)
+    blkC(j*2+1 : (j+1)*2, j*no_states+1 : (j+1)*no_states) = A.C;
     
 end
 
 
 blkA_sparse = sparse(blkA);
 blkB_sparse = sparse(cell2mat(blkBcell));
-blkC_sparse = sparse(cell2mat(blkCcell));
+blkC_sparse = sparse(blkC);
 

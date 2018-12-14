@@ -100,7 +100,7 @@ end
 Time_out = 1;
 mu = [a11, a22, b11, b22];
 
-sigma = 0.1*diag(mu);
+sigma = 0.5*diag(mu);
 % time horizon window
 p = 30;
 maxF = 100;
@@ -118,8 +118,8 @@ X = xhat(:, 1);
 Ck = x(1, :);
 
 %% Test Models
-no_models = 20;
-len_test = 5;
+no_models = 5;
+len_test = p;
 
 y_buffer = zeros(no_outputs*no_models, len_test);
 x_buffer = zeros(4*no_models, len_test);
@@ -133,7 +133,7 @@ for k = 1 : Time_out/Ts - 1
     % sigma = diag(kernel_func)
     hyper_params = mvnrnd(mu,sigma,no_models);
     %% Generate models
-    [blkA_sparse, blkB_sparse, blkC_sparse] = makeSparseBlkdiag(hyper_params, 4, Ts);
+    [blkA_sparse, blkB_sparse, blkC_sparse, kalm_gain] = makeSparseBlkdiag(hyper_params, 4, Ts);
     
     
     %% Optimization part
@@ -148,7 +148,7 @@ for k = 1 : Time_out/Ts - 1
     Ck(1, k) = c;
     
     
-    v = 0.0*randn(no_states, 1);
+    v = 0.001*randn(no_states, 1);
     v(2, 1) = 0.1*v(2, 1);
     w = 0.001*randn(no_outputs, 1);
     
@@ -179,7 +179,7 @@ for k = 1 : Time_out/Ts - 1
     end
     
     y_buffer(:, pntr) = blkC_sparse*x_buffer(:, pntr);
-    kal_buff_gain = kron(eye(no_models), L)*(repmat(y(:, k), no_models, 1) - y_buffer(:, pntr));
+    kal_buff_gain = kalm_gain*(repmat(y(:, k), no_models, 1) - y_buffer(:, pntr));
     
     x_buffer(:, pntr+1) = blkA_sparse*x_buffer(:, pntr) + blkB_sparse*uk; %+ kal_buff_gain;
     

@@ -6,7 +6,7 @@ function [index, rms_vals] = rms_est(y_mat, y_data)
 no_reps = y_mat_down / y_down;
 y_reshape = repmat(y_data, no_reps, 1);
 
-diff_mat = y_mat - y_reshape;
+diff_mat = 100000*(y_mat - y_reshape);
 
 shape_diff_mat = size(diff_mat);
 
