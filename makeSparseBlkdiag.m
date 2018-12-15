@@ -18,7 +18,7 @@ for i = 1 : no_models
     b11 = hyper_params(i, 3);
     b22 = hyper_params(i, 4);
     
-    obvs_poles = [0.0001, 0.001, 0.002, 0.0002]';
+    obvs_poles = [0.01, 0.1, 0.02, 0.02]';
     
     A = makesysd_a(a11, a22, b11, b22, Ts);
     

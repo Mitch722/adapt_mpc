@@ -97,7 +97,7 @@ if value == 1
 end
 
 %%
-Time_out = 1;
+Time_out = 2;
 mu = [a11, a22, b11, b22];
 
 sigma = 1*diag(mu);
@@ -119,8 +119,9 @@ Ck = x(1, :);
 
 %% Test Models
 no_models = 1000;
-len_test = 5;
-
+len_test = p;
+counter = 0;
+    
 a_mat = zeros(round(Time_out/Ts/len_test), 4);
 
 y_buffer = zeros(no_outputs*no_models, len_test);
@@ -150,7 +151,7 @@ for k = 1 : Time_out/Ts - 1
     Ck(1, k) = c;
     
     
-    v = 0.001*randn(no_states, 1);
+    v = 0.01*randn(no_states, 1);
     v(2, 1) = 0.1*v(2, 1);
     w = 0.001*randn(no_outputs, 1);
     
@@ -169,6 +170,7 @@ for k = 1 : Time_out/Ts - 1
     
     
     X = xhat(:, k+1); 
+    
     %% run input through a test models
     % fill the buffer
     pntr = mod(k, len_test)+1;
@@ -208,13 +210,14 @@ for k = 1 : Time_out/Ts - 1
         [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
         
         kernel_func = 0.1*diag((a_prev - a_new).^2) + 0.0001*eye(length(a_prev));
-        % sigma = kernel_func;
+        sigma = kernel_func;
         mu = a_new;
         
         hyper_params = truncate_gauss2(mu, sigma, params_set, no_models);
         % hyper_params = mvnrnd(mu, sigma, no_models);
         
-        a_
+        counter = counter + 1;
+        a_mat(counter, :) = a_new;
         
     end
     

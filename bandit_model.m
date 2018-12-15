@@ -97,7 +97,7 @@ if value == 1
 end
 
 %%
-Time_out = 1;
+Time_out = 2;
 mu = [a11, a22, b11, b22];
 
 sigma = 1*diag(mu);
@@ -119,7 +119,7 @@ Ck = x(1, :);
 
 %% Test Models
 no_models = 1000;
-len_test = 5;
+len_test = p;
 counter = 0;
     
 a_mat = zeros(round(Time_out/Ts/len_test), 4);
@@ -204,13 +204,15 @@ for k = 1 : Time_out/Ts - 1
         B = new_sys.B;
         C = new_sys.C;
         
+        obvs_poles = [0.01, 0.1, 0.02, 0.02]';
+        
         L = place(A', C', obvs_poles);
         L = L';
         
         [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
         
-        kernel_func = 0.1*diag((a_prev - a_new).^2) + 0.0001*eye(length(a_prev));
-        sigma = kernel_func;
+        kernel_func = 0.01*(abs(a_prev)' - abs(a_new)).^2+ 10*eye(length(a_prev));
+        sigma = 0.5*kernel_func + 0.5*kernel_func';
         mu = a_new;
         
         hyper_params = truncate_gauss2(mu, sigma, params_set, no_models);
