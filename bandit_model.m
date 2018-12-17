@@ -61,8 +61,11 @@ b22_set = [b22-var*b22, b22+var*b22];
 
 params_set = [a11_set; a22_set; b11_set; b22_set];
 %% 
+jitter = 0.1;
+true_params = [a11_set(1)+jitter*a11_set(1), a22_set(1)+jitter*a22_set(1)... 
+                ,b11_set(1)+jitter*b11_set(1), b22_set(1)+jitter*b22_set(1)];
 
-sys_low = makesysd_a(a11_set(1), a22_set(1), b11_set(1), b22_set(1), Ts);
+sys_low = makesysd_a(true_params(1), true_params(2), true_params(3), true_params(4),Ts);
 sys_hih = makesysd_a(a11_set(2), a22_set(2), b11_set(2), b22_set(2), Ts);
 
 % Built the System model
@@ -97,12 +100,12 @@ if value == 1
 end
 
 %%
-Time_out = 2;
+Time_out = 15;
 mu = [a11, a22, b11, b22];
 
 sigma = 1*diag(mu);
 % time horizon window
-p = 20;
+p = 15;
 maxF = 100;
 main_bounds = [0.8, 0.2, 1]';
 [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(Aobv, Bobv, Cobv, Kopt, R, p, main_bounds, maxF);
@@ -118,11 +121,12 @@ X = xhat(:, 1);
 Ck = x(1, :);
 
 %% Test Models
-no_models = 1000;
-len_test = p;
+no_models = 500;
+len_test = 50;
 counter = 0;
     
-a_mat = zeros(round(Time_out/Ts/len_test), 4);
+a_mat = zeros(floor(Time_out/Ts/len_test), 4);
+error = zeros(1, floor(Time_out/Ts/len_test));
 
 y_buffer = zeros(no_outputs*no_models, len_test);
 x_buffer = zeros(4*no_models, len_test);
@@ -132,14 +136,15 @@ a_prev = a_init;
 
 hyper_params = truncate_gauss2(mu, sigma, params_set, no_models);
 %%
+
+% Generate models
+[blkA_sparse, blkB_sparse, blkC_sparse, kalm_gain] = makeSparseBlkdiag(hyper_params, 4, Ts);
+
 for k = 1 : Time_out/Ts - 1
     
  
-    % Generate models
-    [blkA_sparse, blkB_sparse, blkC_sparse, kalm_gain] = makeSparseBlkdiag(hyper_params, 4, Ts);
-    
-    
-    %% Optimization part
+  
+    % Optimization part
     
     b = b1 + Ax*X;
     ck = quadprog(H, f, -Ac, -b, [], [], lb, ub, [], options);
@@ -152,8 +157,8 @@ for k = 1 : Time_out/Ts - 1
     
     
     v = 0.01*randn(no_states, 1);
-    v(2, 1) = 0.1*v(2, 1);
-    w = 0.001*randn(no_outputs, 1);
+    v(2, 1) = 0.01*v(2, 1);
+    w = 0.01*randn(no_outputs, 1);
     
     
     
@@ -190,6 +195,8 @@ for k = 1 : Time_out/Ts - 1
     
     % find the optimal model 
     if pntr == len_test
+        
+        counter = counter + 1;
        
         y_buff_reshape = [y_buffer(1:2:end, 1:end-1), y_buffer(2:2:end, 1:end-1)];
         y_data = [y(1, k-len_test+2:k), y(2, k-len_test+2:k)];
@@ -211,16 +218,26 @@ for k = 1 : Time_out/Ts - 1
         
         [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
         
-        kernel_func = 0.01*(abs(a_prev)' - abs(a_new)).^2+ 10*eye(length(a_prev));
-        sigma = 0.5*kernel_func + 0.5*kernel_func';
+        kernel_func = diag(abs(a_prev) - abs(a_new)).^2; % + 100*diag(a_init);
+        sigma = 0.1*(0.5*kernel_func + 0.5*kernel_func')/counter;
+        % sigma = 1/(counter)^2 * sigma + 0.001*diag(a_init);
+        
+%         if mod(counter, 10) == 1 
+%            
+%             sigma = 0.01*diag(a_init);
+%             
+%         end
         mu = a_new;
         
         hyper_params = truncate_gauss2(mu, sigma, params_set, no_models);
         % hyper_params = mvnrnd(mu, sigma, no_models);
         
-        counter = counter + 1;
         a_mat(counter, :) = a_new;
+        error(1, counter) = sum((true_params - a_new).^2);
         
+        % Generate models
+    	[blkA_sparse, blkB_sparse, blkC_sparse, kalm_gain] = makeSparseBlkdiag(hyper_params, 4, Ts);
+         
     end
     
     
@@ -244,5 +261,10 @@ stairs(Ck)
 
 grid on
 title('Reference Input MPC')
+
+figure
+plot(error)
+grid on
+title('Error between modelling and Adaptive Ctrl')
 
 
