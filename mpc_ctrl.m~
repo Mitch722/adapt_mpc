@@ -16,18 +16,6 @@ a22 = (M+m)*g/(M*l);
 
 b11 = 1/M;
 b22 = 1/(M*l);
-
-%% set of m, M, l
-var = 0.4;
-
-a11_set = [a11-var*a11, a11+var*a11];
-a22_set = [a22-var*a22, a22+var*a22];
-
-b11_set = [b11-var*b11, b11+var*b11];
-b22_set = [b22-var*b22, b22+var*b22];
-
-params_set = [a11_set; a22_set; b11_set; b22_set];
-
 %%
 
 sysd = makesysd_a(a11, a22, b11, b22, Ts);
@@ -49,34 +37,21 @@ obvs_poles = [0.0001, 0.001, 0.002, 0.0002]';
 L = place(sysd.A', sysd.C', obvs_poles);
 L = L';
 
-%% 
-jitter = 0.1;
-true_params = [a11_set(1)+jitter*a11_set(1), a22_set(1)+jitter*a22_set(1)... 
-                ,b11_set(1)+jitter*b11_set(1), b22_set(1)+jitter*b22_set(1)];
-
-sys_low = makesysd_a(true_params(1), true_params(2), true_params(3), true_params(4),Ts);
-sys_hih = makesysd_a(a11_set(2), a22_set(2), b11_set(2), b22_set(2), Ts);
-
-% Built the System model
-A = sys_low.A;
-B = sys_low.B;
-C = sys_low.C;
-
-Aobv = A - B*Kopt;
-    
-Bobv = B;
-         
-Cobv = C;
-
-Dobv = [0; 0];
-
-L = place(Aobv', Cobv', obvs_poles);
-L = L';
-
 
 %%
 [~, no_states] = size(Aobv);
 [no_outputs, ~] = size(Cobv);
+
+%% set of m, M, l
+var = 0.4;
+
+a11_set = [a11-var*a11, a11+var*a11];
+a22_set = [a22-var*a22, a22+var*a22];
+
+b11_set = [b11-var*b11, b11+var*b11];
+b22_set = [b22-var*b22, b22+var*b22];
+
+params_set = [a11_set; a22_set; b11_set; b22_set];
 
 
 %% check feasibility 

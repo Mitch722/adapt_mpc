@@ -209,16 +209,16 @@ for k = 1 : Time_out/Ts - 1
         
         % update observers and models
         new_sys = makesysd_a(a_new(1), a_new(2), a_new(3), a_new(4), Ts);
-        A = new_sys.A;
-        B = new_sys.B;
-        C = new_sys.C;
+        Aobv = new_sys.A - new_sys.B*Kopt;
+        Bobv = new_sys.B;
+        Cobv = new_sys.C;
         
         obvs_poles = [0.01, 0.1, 0.02, 0.02]';
         
         L = place(A', C', obvs_poles);
         L = L';
         
-        [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
+        [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(Aobv, Bobv, Cobv, Kopt, R, p, main_bounds, maxF);
         
         kernel_func = diag(abs(a_prev) - abs(a_new)).^2; % + 100*diag(a_init);
         sigma = (0.5*kernel_func + 0.5*kernel_func')/counter;

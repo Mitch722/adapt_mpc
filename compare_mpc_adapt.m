@@ -3,6 +3,7 @@ Time_out = 20;
 seed = 5000;
 
 [y_adapt, x_adapt, Ck_adapt, error, yhat_adapt, xhat_adapt, a_init, true_params] = adapt_ctrl(Time_out, seed);
+%%
 [ympc, xmpc, Ck, yhat_mpc, xhat_mpc] = mpc_ctrl(Time_out, seed);
 
 %%
