@@ -139,7 +139,7 @@ for k = 1 : Time_out/Ts - 1
     Ck(1, k) = c;
     
     
-    v = 0.008*randn(no_states, 1);
+    v = 0.005*randn(no_states, 1);
     v(2, 1) = 0.01*v(2, 1);
     w = 0.01*randn(no_outputs, 1);
     

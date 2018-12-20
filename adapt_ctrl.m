@@ -264,11 +264,5 @@ stairs(Ck)
 grid on
 title('Reference Input MPC')
 
-figure
-plot(linspace(0, Time_out, length(error)), error, 'b')
-hold on 
-plot([0, Time_out], [sum((true_params - a_init).^2), sum((true_params - a_init).^2)], 'r')
-grid on
-title('Error between modelling and Adaptive Ctrl')
 
 
