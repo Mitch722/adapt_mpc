@@ -1,6 +1,8 @@
+function [y, x, Ck, yhat, xhat] = mpc_ctrl(Time_out, seed)
+
 %% initial estimated values
 % set the seed
-rng('default');
+rng(seed);
 
 m = 1;
 M = 4;
@@ -48,7 +50,7 @@ Dobv = [0; 0];
 
 %%
 [~, no_states] = size(Aobv);
-[no_outputs, ~] = size(C);
+[no_outputs, ~] = size(Cobv);
 
 %% set of m, M, l
 var = 0.4;
@@ -100,12 +102,12 @@ if value == 1
 end
 
 %%
-Time_out = 3;
+% Time_out = 15;
 mu = [a11, a22, b11, b22];
 
 sigma = 1*diag(mu);
 % time horizon window
-p = 5;
+p = 15;
 maxF = 100;
 main_bounds = [0.8, 0.2, 1]';
 [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(Aobv, Bobv, Cobv, Kopt, R, p, main_bounds, maxF);
@@ -119,31 +121,11 @@ yhat = zeros(2, Time_out/Ts);
 
 X = xhat(:, 1);
 Ck = x(1, :);
-
-%% Test Models
-no_models = 100;
-len_test = 15;
-counter = 0;
-    
-a_mat = zeros(floor(Time_out/Ts/len_test), 4);
-error = zeros(1, floor(Time_out/Ts/len_test));
-
-y_buffer = zeros(no_outputs*no_models, len_test);
-x_buffer = zeros(4*no_models, len_test);
-
-a_init = [a11; a22; b11; b22]';
-a_prev = a_init;
-
-hyper_params = truncate_gauss2(mu, sigma, params_set, no_models);
 %%
+
 for k = 1 : Time_out/Ts - 1
     
- 
-    % Generate models
-    [blkA_sparse, blkB_sparse, blkC_sparse, kalm_gain] = makeSparseBlkdiag(hyper_params, 4, Ts);
-    
-    
-    %% Optimization part
+    % Optimization part
     
     b = b1 + Ax*X;
     ck = quadprog(H, f, -Ac, -b, [], [], lb, ub, [], options);
@@ -155,9 +137,9 @@ for k = 1 : Time_out/Ts - 1
     Ck(1, k) = c;
     
     
-    v = 0.00005*randn(no_states, 1);
-    v(2, 1) = 0.1*v(2, 1);
-    w = 0.1*randn(no_outputs, 1);
+    v = 0.008*randn(no_states, 1);
+    v(2, 1) = 0.01*v(2, 1);
+    w = 0.01*randn(no_outputs, 1);
     
     
     
@@ -174,69 +156,7 @@ for k = 1 : Time_out/Ts - 1
     
     
     X = xhat(:, k+1); 
-    
-    %% run input through a test models
-    % fill the buffer
-    pntr = mod(k, len_test)+1;
-    
-    if pntr == 1
-       y_buffer = zeros(no_outputs*no_models, len_test);
-       x_buffer = zeros(4*no_models, len_test); 
-       
-       x_buffer(:, 1) = repmat(xhat(:, k), no_models, 1);
-    end
-    
-    y_buffer(:, pntr) = blkC_sparse*x_buffer(:, pntr);
-    kal_buff_gain = kalm_gain*(repmat(y(:, k), no_models, 1) - y_buffer(:, pntr));
-    
-    x_buffer(:, pntr+1) = blkA_sparse*x_buffer(:, pntr) + blkB_sparse*uk + kal_buff_gain;
-    
-    
-    % find the optimal model 
-    if pntr == len_test
-        
-        counter = counter + 1;
-       
-        y_buff_reshape = [y_buffer(1:2:end, 1:end-1), y_buffer(2:2:end, 1:end-1)];
-        y_data = [y(1, k-len_test+2:k), y(2, k-len_test+2:k)];
-        
-        [index, rms_vals] = rms_est(y_buff_reshape, y_data);
-        
-        a_new = hyper_params(index, :);
-        
-        % update observers and models
-        new_sys = makesysd_a(a_new(1), a_new(2), a_new(3), a_new(4), Ts);
-        A = new_sys.A;
-        B = new_sys.B;
-        C = new_sys.C;
-        
-        obvs_poles = [0.01, 0.1, 0.02, 0.02]';
-        
-        L = place(A', C', obvs_poles);
-        L = L';
-        
-        [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
-        
-        kernel_func = 0.1*diag(abs(a_prev) - abs(a_new)).^2; % + 100*diag(a_init);
-        % sigma = 0.001*(0.5*kernel_func + 0.5*kernel_func');
-        sigma = 1/(counter) * sigma + 0.1*sigma;
-        
-        if mod(counter, 8) == 1 
-           
-            sigma = 0.01*diag(a_init);
-            
-        end
-        mu = a_new;
-        
-        hyper_params = truncate_gauss2(mu, sigma, params_set, no_models);
-        % hyper_params = mvnrnd(mu, sigma, no_models);
-        
-        a_mat(counter, :) = a_new;
-        error(1, counter) = sum((true_params - a_new).^2);
-         
-    end
-    
-    
+ 
     
 end
 
@@ -258,9 +178,6 @@ stairs(Ck)
 grid on
 title('Reference Input MPC')
 
-figure
-plot(error)
-grid on
-title('Error betwe')
+
 
 

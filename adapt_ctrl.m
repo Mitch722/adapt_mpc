@@ -1,6 +1,8 @@
+function [y, x, Ck, error, yhat, xhat, a_init, true_params] = adapt_ctrl(Time_out, seed)
+
 %% initial estimated values
 % set the seed
-rng(5);
+rng(seed);
 
 m = 1;
 M = 4;
@@ -100,7 +102,7 @@ if value == 1
 end
 
 %%
-Time_out = 15;
+% Time_out = 15;
 mu = [a11, a22, b11, b22];
 
 sigma = 1*diag(mu);
@@ -156,7 +158,7 @@ for k = 1 : Time_out/Ts - 1
     Ck(1, k) = c;
     
     
-    v = 0.01*randn(no_states, 1);
+    v = 0.005*randn(no_states, 1);
     v(2, 1) = 0.01*v(2, 1);
     w = 0.01*randn(no_outputs, 1);
     
@@ -219,8 +221,8 @@ for k = 1 : Time_out/Ts - 1
         [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
         
         kernel_func = diag(abs(a_prev) - abs(a_new)).^2; % + 100*diag(a_init);
-        % sigma = 0.1*(0.5*kernel_func + 0.5*kernel_func')/counter;
-        sigma = 1/(counter)^2 * sigma + 0.001*diag(a_init);
+        sigma = (0.5*kernel_func + 0.5*kernel_func')/counter;
+        sigma = 1/(counter) * sigma + 0.001*diag(a_init);
         
 %         if mod(counter, 10) == 1 
 %            
@@ -267,3 +269,6 @@ plot(linspace(0, Time_out, length(error)), error, 'b')
 hold on 
 plot([0, Time_out], [sum((true_params - a_init).^2), sum((true_params - a_init).^2)], 'r')
 grid on
+title('Error between modelling and Adaptive Ctrl')
+
+
