@@ -1,4 +1,4 @@
-function [y, x, Ck, error, yhat, xhat, a_init, true_params] = adapt_ctrl(Time_out, seed)
+function [y, x, Ck, error, yhat, xhat, a_init, true_params, Uk] = adapt_ctrl(Time_out, seed, adv_true)
 
 %% initial estimated values
 % set the seed
@@ -103,6 +103,10 @@ end
 
 %%
 % Time_out = 15;
+
+no_steps = Time_out / Ts;
+Tp = no_steps/2;
+
 mu = [a11, a22, b11, b22];
 
 sigma = 1*diag(mu);
@@ -121,10 +125,12 @@ yhat = zeros(2, Time_out/Ts);
 
 X = xhat(:, 1);
 Ck = x(1, :);
+Uk = Ck;
 
 %% Test Models
-no_models = 500;
-len_test = 50;
+no_models = 100;
+% len_test = 25;
+len_test = 10;
 counter = 0;
     
 a_mat = zeros(floor(Time_out/Ts/len_test), 4);
@@ -158,14 +164,35 @@ for k = 1 : Time_out/Ts - 1
     Ck(1, k) = c;
     
     
-    v = 0.01*randn(no_states, 1);
-    v(2, 1) = 0.01*v(2, 1);
+    v = 0.001*randn(no_states, 1);
     w = 0.01*randn(no_outputs, 1);
     
+    uni_v = 0.002;
+    
+    v = v - uni_v + (2*uni_v)*rand(no_states, 1);   % + 0.1*uni_v;
+    w = w - uni_v + (2*uni_v)*rand(no_outputs, 1);
+    
+    v(2, 1) = 0.01*v(2, 1);
     
     
     %% System dynamics
     uk = -Kopt*xhat(:, k) + c;
+    Uk(1, k) = uk;
+    
+    if adv_true == 1
+        
+        a11hat = a11 + 0.2*a11*sin(2*pi*k/Tp);
+        a22hat = a22 + 0.2*a22*
+        b11hat
+        b22hat
+        
+        
+        sysd2 = makesysd_a(a11hat, a22hat, b11hat, b22hat, Ts);
+        A = sysd2.A;
+        B = sysd2.B;
+        C = sysd2.C;
+        
+    end
     
     x(:, k+1) = A*x(:, k) + B*uk + v;
     y(:, k) = C*x(:, k) + w;
@@ -209,20 +236,20 @@ for k = 1 : Time_out/Ts - 1
         
         % update observers and models
         new_sys = makesysd_a(a_new(1), a_new(2), a_new(3), a_new(4), Ts);
-        A = new_sys.A;
-        B = new_sys.B;
-        C = new_sys.C;
+        Aobv = new_sys.A - new_sys.B*Kopt;
+        Bobv = new_sys.B;
+        Cobv = new_sys.C;
         
         obvs_poles = [0.01, 0.1, 0.02, 0.02]';
         
         L = place(A', C', obvs_poles);
         L = L';
         
-        [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(A-B*Kopt, B, C, Kopt, R, p, main_bounds, maxF);
+        [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(Aobv, Bobv, Cobv, Kopt, R, p, main_bounds, maxF);
         
         kernel_func = diag(abs(a_prev) - abs(a_new)).^2; % + 100*diag(a_init);
         sigma = (0.5*kernel_func + 0.5*kernel_func')/counter;
-        sigma = 1/(0.1*counter) * sigma + 0.001*diag(a_init);
+        sigma = 1/(counter) * sigma + 0.001*diag(a_init);
         
 %         if mod(counter, 10) == 1 
 %            
@@ -264,11 +291,5 @@ stairs(Ck)
 grid on
 title('Reference Input MPC')
 
-figure
-plot(linspace(0, Time_out, length(error)), error, 'b')
-hold on 
-plot([0, Time_out], [sum((true_params - a_init).^2), sum((true_params - a_init).^2)], 'r')
-grid on
-title('Error between modelling and Adaptive Ctrl')
 
 

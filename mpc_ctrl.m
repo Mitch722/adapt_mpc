@@ -1,4 +1,4 @@
-function [y, x, Ck, yhat, xhat] = mpc_ctrl(Time_out, seed)
+function [y, x, Ck, yhat, xhat, true_params, Uk] = mpc_ctrl(Time_out, seed, adv_true)
 
 %% initial estimated values
 % set the seed
@@ -107,6 +107,8 @@ end
 
 %%
 % Time_out = 15;
+no_steps = Time_out / Ts;
+Tp = no_steps/4;
 
 % time horizon window
 p = 15;
@@ -123,6 +125,7 @@ yhat = zeros(2, Time_out/Ts);
 
 X = xhat(:, 1);
 Ck = x(1, :);
+Uk = Ck;
 %%
 
 for k = 1 : Time_out/Ts - 1
@@ -140,13 +143,33 @@ for k = 1 : Time_out/Ts - 1
     
     
     v = 0.005*randn(no_states, 1);
-    v(2, 1) = 0.01*v(2, 1);
     w = 0.01*randn(no_outputs, 1);
     
+    uni_v = 0.0001;
     
+    v = v - uni_v + (2*uni_v)*rand(no_states, 1); % + 0.1*uni_v;
+    w = w - uni_v + (2*uni_v)*rand(no_outputs, 1);
+    
+    v(2, 1) = 0.01*v(2, 1);
     
     %% System dynamics
     uk = -Kopt*xhat(:, k) + c;
+    Uk(1, k) = uk;
+    
+    if adv_true == 1
+        
+        a11hat = a11 + 0.4*(a11_set(2) - a11_set(1))*sin(2*pi*k/Tp);
+        a22hat = a22 + 0.4*(a22_set(2) - a22_set(1))*sin(2*pi*k/Tp);
+        b11hat = b11 + 0.4*(b11_set(2) - b11_set(1))*sin(2*pi*k/Tp);
+        b22hat = b22 + 0.4*(b22_set(2) - b22_set(1))*sin(2*pi*k/Tp);
+        
+        
+        sysd2 = makesysd_a(a11hat, a22hat, b11hat, b22hat, Ts);
+        A = sysd2.A;
+        B = sysd2.B;
+        C = sysd2.C;
+        
+    end
     
     x(:, k+1) = A*x(:, k) + B*uk + v;
     y(:, k) = C*x(:, k) + w;
