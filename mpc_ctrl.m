@@ -145,7 +145,7 @@ for k = 1 : Time_out/Ts - 1
     v = 0.005*randn(no_states, 1);
     w = 0.01*randn(no_outputs, 1);
     
-    uni_v = 0.0001;
+    uni_v = 0.005;
     
     v = v - uni_v + (2*uni_v)*rand(no_states, 1); % + 0.1*uni_v;
     w = w - uni_v + (2*uni_v)*rand(no_outputs, 1);
@@ -187,21 +187,21 @@ end
 
 %%
 
-figure
-plot(y(1, :))
-grid on
-title('Cart Position MPC')
-
-figure
-plot(y(2, :))
-grid on
-title('Angle of Pendulum phi')
-
-figure
-stairs(Ck)
-
-grid on
-title('Reference Input MPC')
+% figure
+% plot(y(1, :))
+% grid on
+% title('Cart Position MPC')
+% 
+% figure
+% plot(y(2, :))
+% grid on
+% title('Angle of Pendulum phi')
+% 
+% figure
+% stairs(Ck)
+% 
+% grid on
+% title('Reference Input MPC')
 
 
 

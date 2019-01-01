@@ -1,4 +1,4 @@
-function [y, x, Ck, error, yhat, xhat, a_init, true_params, Uk, a_mat, params_mat] = adapt_ctrl(Time_out, seed, adv_true)
+function [y, x, Ck, error, yhat, xhat, a_init, true_params, Uk, a_mat, params_mat] = adapt_gp(Time_out, seed, adv_true)
 
 %% initial estimated values
 % set the seed
@@ -127,8 +127,7 @@ Ck = x(1, :);
 Uk = Ck;
 
 %% Test Models
-% no_models = 50;
-no_models = 50;
+no_models = 10;
 % len_test = 25;
 len_test = 5;
 counter = 0;
@@ -145,7 +144,14 @@ x_buffer = zeros(4*no_models, len_test);
 a_init = [a11; a22; b11; b22]';
 a_prev = a_init;
 
+% initalize hyper_params
+no_repeats = 4;
+hp_cell = cell(no_repeats, 1);
+
+rms_cell = cell(no_repeats, 1);
+
 hyper_params = truncate_gauss3(mu, sigma, params_set, no_models);
+
 %%
 
 % Generate models
@@ -236,7 +242,14 @@ for k = 1 : Time_out/Ts - 1
         
         [index, rms_vals] = rms_est(y_buff_reshape, y_data);
         
-        a_new = hyper_params(index, :);
+        rms_cell{mod(counter, no_repeats)+1, 1} = rms_vals;
+        hp_cell{mod(counter, no_repeats)+1, 1} = hyper_params;
+        
+        mu_gp = mean(cell2mat(rms_cell));
+
+        hyper_params = gp_models(mu_gp, cell2mat(rms_cell), cell2mat(hp_cell), params_set, no_models);
+        % set the new parameters to the min of the Bayesian optimization
+        a_new = hyper_params(1, :);
         
         % update observers and models
         new_sys = makesysd_a(a_new(1), a_new(2), a_new(3), a_new(4), Ts);
@@ -251,20 +264,11 @@ for k = 1 : Time_out/Ts - 1
         
         [H, f, Ac, Ax, b1, lb, ub, options] = MPC_vars(Aobv, Bobv, Cobv, Kopt, R, p, main_bounds, maxF);
         
-        kernel_func = diag(abs(a_prev) - abs(a_new)).^2; % + 100*diag(a_init);
-        sigma = (0.5*kernel_func + 0.5*kernel_func')/counter;
-        sigma = 1/(counter) * sigma + 0.001*diag(a_init);
-        
 %         if mod(counter, 10) == 1 
 %            
 %             sigma = 0.01*diag(a_init);
 %             
 %         end
-        mu = a_new;
-        
-        hyper_params = truncate_gauss3(mu, sigma, params_set, no_models);
-        % hyper_params = mvnrnd(mu, sigma, no_models);
-        
         a_mat(counter, :) = a_new;
         error(1, counter) = sum((true_params - a_new).^2);
         
