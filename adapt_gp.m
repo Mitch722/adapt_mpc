@@ -127,9 +127,9 @@ Ck = x(1, :);
 Uk = Ck;
 
 %% Test Models
-no_models = 10;
+no_models = 50;
 % len_test = 25;
-len_test = 5;
+len_test = 50;
 counter = 0;
     
 a_mat = zeros(floor(Time_out/Ts/len_test), 4);
@@ -247,7 +247,11 @@ for k = 1 : Time_out/Ts - 1
         
         mu_gp = mean(cell2mat(rms_cell));
 
-        hyper_params = gp_models(mu_gp, cell2mat(rms_cell), cell2mat(hp_cell), params_set, no_models);
+        % hyper_params = gp_models(mu_gp, cell2mat(rms_cell), cell2mat(hp_cell), params_set, no_models);
+        % hyper_params = matern_gp32(mu_gp, cell2mat(rms_cell), cell2mat(hp_cell), params_set, no_models);
+        hyper_params = matern_gp52(mu_gp, cell2mat(rms_cell), cell2mat(hp_cell), params_set, no_models);
+        
+        
         % set the new parameters to the min of the Bayesian optimization
         a_new = hyper_params(1, :);
         

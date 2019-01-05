@@ -11,12 +11,12 @@ mu = mu*ones(length(x_data(:, 1)), 1);
 for j = 1 : dim
 
     x_pred(:, j) = params_set(j, 1) + (params_set(j, 2) - params_set(j, 1))*rand(npred, 1);
-
+    % x_pred(:, j) = linspace(params_set(j, 1), params_set(j, 2), npred);
 end
 
-[rbf_k, rbf_kstar, rbf_kstarstar] = rbf_kernel(x_data, x_pred, 1, 1, 0.1);
+[rbf_k, rbf_kstar, rbf_kstarstar] = rbf_kernel(x_data, x_pred, 0.1, 0.1, 1);
 
-inv_K = inv(rbf_k + 0.001*eye(size(rbf_k)));
+inv_K = inv(rbf_k + 0.00001*eye(size(rbf_k)));
 
 y_pred = mu_pred + rbf_kstar * inv_K *(y_data - mu);
 

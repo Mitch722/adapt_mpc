@@ -2,6 +2,7 @@
 Time_out = 25;
 seed = 100;
 adv_true = 1;
+%% Adaptive MPC using random sampling
 
 [y_adapt, x_adapt, Ck_adapt, error, yhat_adapt, xhat_adapt, a_init, true_params,...
     u_adpt, a_mat, params_mat] = adapt_ctrl(Time_out, seed, adv_true);
@@ -34,6 +35,13 @@ error_Xmpc = sum(sum((xmpc-xhat_mpc).^2, 2), 1);
 cum_error_Xadapt_sq = sum(cumsum((x_adapt-xhat_adapt).^2, 2), 1);
 cum_error_Xmpc_sq = sum(cumsum((xmpc-xhat_mpc).^2, 2), 1);
 cum_error_Xagp_sq = sum(cumsum((x_agp-xhat_gp).^2, 2), 1);
+
+cum_time = [1:1:length(cum_error_Xadapt_sq)-1];
+
+MSE_adapt = cum_error_Xadapt_sq(2:end)./cum_time;
+MSE_mpc = cum_error_Xmpc_sq(2:end)./cum_time;
+MSE_agp = cum_error_Xagp_sq(2:end)./cum_time;
+
 
 cum_error_Xadapt = sum(cumsum((x_adapt-xhat_adapt), 2), 1);
 cum_error_Xmpc = sum(cumsum((xmpc-xhat_mpc), 2), 1);
@@ -73,6 +81,18 @@ plot(x_inputs, coefs_adpt*[x_inputs; ones(1, 10)], 'k+')
 plot(x_inputs, coefs_mpc*[x_inputs; ones(1, 10)], 'k+')
 
 title('Cumlative State Error Squared adapt vs mpc')
+legend('Adaptive Ctrl', 'MPC', 'Adaptive GP')
+xlabel('Time Step: 100Hz Controller')
+
+figure
+plot(MSE_adapt, 'b')
+hold on 
+grid on
+plot(MSE_mpc, 'r')
+hold on
+plot(MSE_agp, 'k')
+
+title('Mean-Squared State Error adapt vs mpc')
 legend('Adaptive Ctrl', 'MPC', 'Adaptive GP')
 xlabel('Time Step: 100Hz Controller')
 
@@ -142,64 +162,82 @@ figure
 title('How the Model Parameters change')
 
 subplot(2, 2, 1)
-plot(a_mat(:, 1), 'b')
+plot(a_mat(:, 1), 'b+-')
 grid on
 
 subplot(2, 2, 2)
-plot(a_mat(:, 2), 'r')
+plot(a_mat(:, 2), 'r+-')
 grid on
 
 subplot(2, 2, 3)
-plot(a_mat(:, 3), 'm')
+plot(a_mat(:, 3), 'm+-')
 grid on
 
 subplot(2, 2, 4)
-plot(a_mat(:, 4), 'k')
+plot(a_mat(:, 4), 'k+-')
 
 grid on
 
+figure
+title('How the Model Parameters change GP')
 
+subplot(2, 2, 1)
+plot(a_mat_gp(:, 1), 'b+-')
+grid on
+
+subplot(2, 2, 2)
+plot(a_mat_gp(:, 2), 'r+-')
+grid on
+
+subplot(2, 2, 3)
+plot(a_mat_gp(:, 3), 'm+-')
+grid on
+
+subplot(2, 2, 4)
+plot(a_mat_gp(:, 4), 'k+-')
+
+grid on
 
 figure
 title('How the Model Parameters change GP')
 
 subplot(2, 2, 1)
 plot(a_mat_gp(:, 1), 'b')
+hold on
+plot(a_mat(1:length(a_mat(:, 1))/length(a_mat_gp(:, 1)):end, 1), 'r')
 grid on
 
 subplot(2, 2, 2)
-plot(a_mat_gp(:, 2), 'r')
+plot(a_mat_gp(:, 2), 'b')
+hold on
+plot(a_mat(1:length(a_mat(:, 1))/length(a_mat_gp(:, 1)):end, 2), 'r')
 grid on
 
 subplot(2, 2, 3)
-plot(a_mat_gp(:, 3), 'm')
+plot(a_mat_gp(:, 3), 'b')
+hold on
+plot(a_mat(1:length(a_mat(:, 1))/length(a_mat_gp(:, 1)):end, 3), 'r')
 grid on
 
 subplot(2, 2, 4)
-plot(a_mat_gp(:, 4), 'k')
+plot(a_mat_gp(:, 4), 'b')
+hold on
+plot(a_mat(1:length(a_mat(:, 1))/length(a_mat_gp(:, 1)):end, 4), 'r')
 
 grid on
-
-
 
 %% 
 
 figure
 
-subplot(2, 1, 1)
 plot(y_adapt(1, :), 'b')
 hold on
 plot(ympc(1, :), 'r')
+plot(y_agp(1, :), 'k')
 grid on
 
-subplot(2, 1, 2)
-
-plot(y_adapt(2, :), 'b')
-hold on
-grid on
-plot(ympc(2, :), 'r')
 
 title('Outputs: Displacements of Cart and Angle of Pendulum')
-legend('Adaptive Ctrl', 'MPC')
+legend('Adaptive Ctrl', 'MPC', 'Adaptive Bayesian Optimisation')
 
 
